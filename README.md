@@ -282,6 +282,42 @@ The ROM itself doesn't take a clock; it just decodes whatever address is handed 
 
 12) Then we're done.
 
+# INSTRUCTION SET AND CONTROL LOOK UP TABLE
+INSTRUCTION SET
+Opcode	Mnemonic	Operation
+0000	LDA	   Load accumulator from memory
+0001	ADD	   Add memory data to accumulator
+0010	SUB	   Subtract memory data from accumulator
+1110	OUT	   Transfer accumulator contents to output register
+1111	HLT	   Halt execution
+
+ROM MICROCODES 
+T-State	LDA	ADD	SUB	OUT	HLT
+T1	CO, MI	CO, MI	CO, MI	CO, MI	CO, MI
+T2	RO, II, CE	RO, II, CE	RO, II, CE	RO, II, CE	RO, II, CE
+T3	IO, MI	IO, MI	IO, MI	AO, OI	HLT
+T4	RO, AI	RO, BI	RO, BI	—	—
+T5	—	EO, AI	EO, AI, SU	—	—
+T6	—	—	—	—	—
+
+Control Signal Meanings
+Signal	Description
+CO	Program Counter Out
+CE	Program Counter Enable (increment)
+MI	Memory Address Register In
+RO	RAM Out
+II	Instruction Register In
+IO	Instruction Register Address Out
+AI	Accumulator In
+AO	Accumulator Out
+BI	B Register In
+EO	ALU Out
+SU	ALU Subtract Mode
+OI	Output Register In
+HLT	Halt Clock
+
+EXAMPLE - SAP_CODE01 AND 02 (GIVEN BELOW)
+
 # PROGRAM DEMONSTRATION 1 - ADDITION/SUBTRACTION 
 Following is step by step process to demonstrate how to run a basic addition program on SAP-1 architecture . the instruction cycles are also mentioned in images.
 Problem: 16+20+24-32
@@ -324,4 +360,77 @@ Just empty memory, not part of the program
 9H-CH store the data as mentioned earlier 
 The program (instructions) occupies the lower addresses, and the data occupies the higher addresses. Instructions come first — that's what "stored ahead" means. Ahead = lower addresses in memory.
 
+# PROGRAM DEMONSTRATION 2 - FIBONACCI SEQUENCE 
+SAP_CODE02
+FIBONACCI SEQUENCE PROGRAM demonstration 
+Address 0: LDA 14   → load contents of address 14 into accumulator
+Address 1: OUT      → display accumulator
+Address 2: ADD 15   → add contents of address 15 to accumulator
+Address 3: OUT      → display accumulator
+Address 4: HLT      → stop
+Address E: 00       → first Fibonacci number
+Address F: 01       → second Fibonacci number 
+
+For anyone who's unaware , a Fibonacci sequence is defined as
+Tn=Tn-1+Tn-2 , T0=0 and t1=1 
+a simple C code would be 
+
+#include <stdio.h>
+
+int main()
+{
+    int n, a = 0, b = 1, next;
+
+    printf("Enter number of terms: ");
+    scanf("%d", &n);
+   
+    printf("Fibonacci Sequence:\n");
+
+    for(int i = 0; i < n; i++)
+    {
+        printf("%d ", a);
+        next = a + b;
+        a = b;
+        b = next;
+    }
+
+    return 0;
+}
+
+Now actually here in code , we take the input from user . Since this is an SAP design , we have to manually load SRAM registers addressed 14 and 15. This is the fundamental reality of early computers — the program lives in memory before execution begins.Before you start the clock in Logisim, you manually enter the program into SRAM via the hex editor. Just like you programmed the ROM contents earlier.You open SRAM hex editor → type in the instructions → close → run clock and you get outputs 
+
+# REFERENCES
+Primary Textbooks
+Malvino, A.P. & Brown, J. — Digital Computer Electronics, 3rd Edition
+Mano, M.M. — Computer System Architecture
+Mano, M.M. — Digital Design and computer design
+CHARLES P. - CODE :The Hidden Language of Computer Hardware and Software
+Johan H. Huijsing - Operational Amplifiers - Theory and Design
+
+Electronics / Analog Reference
+Razavi, B. — Microelectronics and design of CMOS analog circuits
+
+Video Lectures
+Ben Eater — Building an 8-bit CPU from scratch (YouTube) (breadboard CPU implementation, EEPROM microcode)
+NPTEL — Computer Organization and Architecture, Prof. Kamakoti, IIT Madras
+MIT OCW Microelectronic Devices and Circuits
+
+EDA Tools Used
+Logisim Evolution (digital circuit simulation and construction)
+
+OTHERS
+Texas Instrument datasheets (internal circuit understanding)
+
+# CONCLUSIONS AND FUTURE 
+Limitations
+No flags, no branching, 16 bytes only.
+Moreover you may notice that 3E3H state is a nop , one way to speed up SAP 1 operation is to eliminate nop states. This would shorten a machine cycle..like for LDA it would be 5 states and not 6. A variable machine cycle is shown in one of the schematics..though not implemented in my design. When T6(nop) state begins, control ROM  produces output of 3E3H and we use some combinational logic to detect this and send low output signal.
+
+FUTURE PLANS
+Rewrite SAP-1 completely in Verilog HDL
+Self-checking testbenches for each module
+Waveform verification in GTKWave
+Extend to SAP-2 in Verilog
+Add flags register (Zero, Carry)
+Implement conditional branching (JZ, JMP)
 
